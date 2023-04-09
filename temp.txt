@@ -1,17 +1,4 @@
-use bevy::prelude::*;
-
-use crate::components::{
-    AnimationIndices, AnimationTimer, Belt, Direction, Position, SpriteSelector,
-};
-
-pub fn setup(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-) {
-    commands.spawn(Camera2dBundle::default());
-
-    let texture_handle = asset_server.load("hr-transport-belt.png");
+let texture_handle = asset_server.load("hr-transport-belt.png");
     let texture_atlas = TextureAtlas::from_grid(
         texture_handle,
         Vec2::new(68.0, 68.0),
@@ -56,4 +43,3 @@ pub fn setup(
             .insert(Position::new(i as i32, 0))
             .insert(sprite_selector.clone());
     }
-}

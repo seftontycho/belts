@@ -19,26 +19,110 @@ impl Position {
             y: (world_position.y / TILE_SIZE).round() as i32,
         }
     }
+
+    pub fn up(&self) -> Self {
+        Self::new(self.x, self.y - 1)
+    }
+
+    pub fn down(&self) -> Self {
+        Self::new(self.x, self.y + 1)
+    }
+
+    pub fn left(&self) -> Self {
+        Self::new(self.x - 1, self.y)
+    }
+
+    pub fn right(&self) -> Self {
+        Self::new(self.x + 1, self.y)
+    }
+
+    pub fn adjacent(&self) -> [Self; 4] {
+        [self.up(), self.down(), self.left(), self.right()]
+    }
+
+    pub fn direction_to(&self, other: &Self) -> Option<Direction> {
+        if self.up() == *other {
+            Some(Direction::Up)
+        } else if self.down() == *other {
+            Some(Direction::Down)
+        } else if self.left() == *other {
+            Some(Direction::Left)
+        } else if self.right() == *other {
+            Some(Direction::Right)
+        } else {
+            None
+        }
+    }
+
+    pub fn in_direction(&self, direction: &Direction) -> Self {
+        match direction {
+            Direction::Up => self.up(),
+            Direction::Down => self.down(),
+            Direction::Left => self.left(),
+            Direction::Right => self.right(),
+        }
+    }
 }
 
 #[derive(Component, Deref, DerefMut, Debug)]
 pub struct AnimationTimer(pub Timer);
 
-#[derive(Clone, Debug)]
-pub enum SpriteCardinal {
+#[derive(Clone, Debug, PartialEq)]
+pub enum Direction {
     Up,
     Down,
     Left,
     Right,
 }
 
+impl Direction {
+    pub fn opposite(&self) -> Self {
+        match self {
+            Direction::Up => Direction::Down,
+            Direction::Down => Direction::Up,
+            Direction::Left => Direction::Right,
+            Direction::Right => Direction::Left,
+        }
+    }
+
+    pub fn rotate_clockwise(&self) -> Self {
+        match self {
+            Direction::Up => Direction::Right,
+            Direction::Down => Direction::Left,
+            Direction::Left => Direction::Up,
+            Direction::Right => Direction::Down,
+        }
+    }
+}
+
 #[derive(Component, Clone, Debug)]
-pub enum SpriteDirection {
-    Straight(SpriteCardinal),
-    // Cardinal here is the final direction
-    Clockwise(SpriteCardinal),
-    // Cardinal here is the final direction
-    Anticlockwise(SpriteCardinal),
+pub struct Belt {
+    pub start: Direction,
+    pub end: Direction,
+}
+
+impl Belt {
+    pub fn new(start: Direction, end: Direction) -> Self {
+        Self { start, end }
+    }
+
+    pub fn rotate(&mut self, end: Direction) {
+        self.start = end.opposite();
+        self.end = end;
+    }
+
+    fn is_straight(&self) -> bool {
+        self.start.opposite() == self.end
+    }
+
+    fn is_clockwise(&self) -> bool {
+        match self.start {
+            Direction::Up => self.end == Direction::Left,
+            Direction::Down => self.end == Direction::Right,
+            Direction::Left => self.end == Direction::Down,
+            Direction::Right => self.end == Direction::Up,
+        }
+    }
 }
 
 #[derive(Component, Clone, Debug)]
@@ -51,12 +135,18 @@ impl SpriteSelector {
         Self { indecies }
     }
 
-    pub fn get_indecies(&self, direction: SpriteDirection) -> Option<(usize, usize)> {
-        match direction {
-            SpriteDirection::Straight(cardinal) => self.indecies[cardinal as usize],
-            SpriteDirection::Clockwise(cardinal) => self.indecies[cardinal as usize + 4],
-            SpriteDirection::Anticlockwise(cardinal) => self.indecies[cardinal as usize + 8],
+    pub fn get_indecies(&self, belt: &Belt) -> (usize, usize) {
+        let mut offset = 8;
+
+        if belt.is_clockwise() {
+            offset -= 4;
         }
+
+        if belt.is_straight() {
+            offset -= 8;
+        }
+
+        self.indecies[offset + belt.end.clone() as usize].unwrap()
     }
 }
 
